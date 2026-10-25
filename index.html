@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DRISHTI-SETU | Mobile App & Universal Scanner</title>
+    
+    <!-- PWA & Mobile App Support -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <meta name="theme-color" content="#1e3a8a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts for Accessibility -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Mukta+Malar:wght@400;600;800&family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- Tesseract OCR for client-side text recognition -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+</head>
+<body id="appBody">
+    <!-- Top Government Initiative Banner -->
+    <header class="govt-banner">
+        <div class="banner-content">
+            <span class="emblem">🏛️</span>
+            <div>
+                <p class="gov-title">MINISTRY OF EDUCATION · GOVT OF INDIA</p>
+                <p class="initiative-sub">SEVA SANKALP ABHIYAN · VIKSIT BHARAT @2047 · SFIC 2026</p>
+            </div>
+            <div class="network-status" id="netStatusBadge">
+                <span class="pulse-dot"></span>
+                <span id="netStatusText">🟢 OFFLINE READY</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Project Title & Subtitle -->
+        <section class="title-section">
+            <h1 class="main-title">👁️ DRISHTI-SETU <span class="tamil-title">(பார்வை பாலம்)</span></h1>
+            <p class="tagline">நேரடி கேமரா ஸ்கேனர்: அனைத்து மாத்திரைகள் & ரூபாய் நோட்டுகள்</p>
+            <p class="sub-tagline">100% Strict Filtering · No False Detections · Pure Edge AI</p>
+        </section>
+
+        <!-- Mode Selection Buttons -->
+        <section class="mode-selector">
+            <button class="mode-btn active" id="btnModeMed" onclick="setMode('medicine')">
+                <span class="btn-icon">💊</span>
+                <span class="btn-text">மாத்திரை அட்டை ஸ்கேன்<br><small>All Medicines & Full Usage Details</small></span>
+            </button>
+            <button class="mode-btn" id="btnModeCurr" onclick="setMode('currency')">
+                <span class="btn-icon">💵</span>
+                <span class="btn-text">ரூபாய் நோட்டு ஸ்கேன்<br><small>All ₹10 to ₹500 Notes Scan</small></span>
+            </button>
+        </section>
+
+        <!-- Settings & Camera Controls -->
+        <div class="settings-bar">
+            <div class="settings-item">
+                <label for="langSelect">🗣️ மொழி (Language):</label>
+                <select id="langSelect" onchange="onLanguageChange()">
+                    <option value="ta-IN" selected>தமிழ் (Tamil)</option>
+                    <option value="en-IN">English (India)</option>
+                    <option value="hi-IN">हिंदी (Hindi)</option>
+                </select>
+            </div>
+
+            <!-- Camera Toggle Button & Native Mobile Capture -->
+            <div class="settings-item">
+                <button class="cam-toggle-btn" id="btnCamToggle" onclick="toggleCamera()">
+                    📷 கேமரா ஆன் செய் (Start Camera)
+                </button>
+                <input type="file" id="fileCameraInput" accept="image/*" capture="environment" style="display:none;" onchange="handleFileCapture(event)">
+                <button class="cam-toggle-btn" style="background: #0284c7; color: #fff;" onclick="document.getElementById('fileCameraInput').click()" title="மொபைல் கேமராவில் நேரடியாக புகைப்படம் எடுக்க">
+                    📸 போட்டோ எடு (Photo)
+                </button>
+            </div>
+
+            <button class="replay-btn" onclick="replayAudio()" title="மீண்டும் கேட்க (Repeat Voice)">
+                🔊 மீண்டும் கேட்க (Repeat)
+            </button>
+        </div>
+
+        <!-- Camera Viewport & Direct Scanner -->
+        <section class="camera-wrapper">
+            <div class="video-container" id="videoContainer">
+                <video id="webcam" autoplay playsinline muted></video>
+                <canvas id="overlayCanvas"></canvas>
+                <div class="camera-placeholder" id="camPlaceholder">
+                    <span class="cam-icon">📷</span>
+                    <p>கேமரா ஆஃப் செய்யப்பட்டுள்ளது</p>
+                    <small>மேலே உள்ள "Start Camera" பட்டனை அழுத்தவும்</small>
+                </div>
+                <div class="scanner-laser" id="scannerLaser"></div>
+                <div class="targeting-box" id="targetBox" style="display: none;">
+                    <span class="target-corner tl"></span>
+                    <span class="target-corner tr"></span>
+                    <span class="target-corner bl"></span>
+                    <span class="target-corner br"></span>
+                    <p class="target-hint" id="targetHint">பொருளை இங்கே காட்டவும்<br>(Hold item inside box)</p>
+                </div>
+            </div>
+
+            <!-- Big Direct Scan Button -->
+            <div class="action-bar">
+                <button class="scan-btn" id="btnScan" onclick="triggerScan()">
+                    <span class="scan-icon">⚡</span>
+                    <span class="scan-text" id="scanBtnText">இப்போது ஸ்கேன் செய் (SCAN NOW)</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Quick 1-Click Demo / Test Pills (Instant Test on Mobile & Video Recording) -->
+        <section class="sample-pills-bar">
+            <div class="pills-header">
+                <span>⚡ நேரடி மாதிரி சோதனை (Quick Sample Demo / Test):</span>
+            </div>
+            <div class="pills-scroll">
+                <button class="pill-btn pill-curr" onclick="testCurrencySample('10')">💵 ₹10</button>
+                <button class="pill-btn pill-curr" onclick="testCurrencySample('20')">💵 ₹20</button>
+                <button class="pill-btn pill-curr" onclick="testCurrencySample('50')">💵 ₹50</button>
+                <button class="pill-btn pill-curr" onclick="testCurrencySample('100')">💵 ₹100</button>
+                <button class="pill-btn pill-curr" onclick="testCurrencySample('200')">💵 ₹200</button>
+                <button class="pill-btn pill-curr" onclick="testCurrencySample('500')">💵 ₹500</button>
+                <button class="pill-btn pill-med" onclick="testMedicineSample('PARACETAMOL')">💊 Dolo 650</button>
+                <button class="pill-btn pill-med" onclick="testMedicineSample('THYRONORM')">💊 Thyronorm</button>
+                <button class="pill-btn pill-med" onclick="testMedicineSample('AZITHRAL')">💊 Azithromycin</button>
+                <button class="pill-btn pill-med" onclick="testMedicineSample('TELMA')">💊 Telmisartan</button>
+                <button class="pill-btn pill-warn" onclick="testMedicineSample('EXPIRED')">⚠️ Expired Strip</button>
+            </div>
+        </section>
+
+        <!-- Online Query Action Box (Appears only when an unknown medicine is detected) -->
+        <section class="online-prompt-box" id="onlinePromptBox" style="display: none;">
+            <div class="prompt-header">
+                <span class="prompt-icon">🌐</span>
+                <div>
+                    <h4 id="promptTitle">புதிய மாத்திரை கண்டறியப்பட்டது!</h4>
+                    <p id="promptSub">இந்த மாத்திரை பற்றிய முழு விவரங்களையும் இணையத்தில் தேடவா?</p>
+                </div>
+            </div>
+            <div class="prompt-actions">
+                <button class="btn-prompt-search" id="btnDoNetSearch" onclick="performLiveOnlineSearch()">
+                    🔍 இணையத்தில் தேடு (Search Online Details)
+                </button>
+                <button class="btn-prompt-cancel" onclick="dismissOnlinePrompt()">
+                    வேண்டாம் (Skip)
+                </button>
+            </div>
+        </section>
+
+        <!-- Direct Live Results Card (Full Clinical Details, Usage & Safety) -->
+        <section class="result-card" id="resultCard">
+            <div class="result-header">
+                <span class="status-indicator" id="statusIndicator">ℹ️</span>
+                <div>
+                    <h3 id="resultTitle">ஸ்கேன் செய்ய தயாராக உள்ளது...</h3>
+                    <p class="source-tag" id="sourceTag">System Ready · No Active Scan</p>
+                </div>
+            </div>
+            <div class="result-body">
+                <!-- Row 1: Item Name -->
+                <div class="detail-row">
+                    <span class="detail-label" id="labelItem">பொருள் (Detected Item):</span>
+                    <span class="detail-value highlight-val" id="valItem">-</span>
+                </div>
+
+                <!-- Row 2: What it is used for (Uses & Purpose) -->
+                <div class="detail-row info-row">
+                    <span class="detail-label">🎯 எதற்கு பயன்படுகிறது? (What it is used for):</span>
+                    <span class="detail-value detail-text" id="valUses">-</span>
+                </div>
+
+                <!-- Row 3: How to Take (Dosage & Timing) -->
+                <div class="detail-row timing-row">
+                    <span class="detail-label">🥄 எப்படி சாப்பிட வேண்டும்? (How to Take):</span>
+                    <span class="detail-value detail-text" id="valTiming">-</span>
+                </div>
+
+                <!-- Row 4: Important Precaution / Warning -->
+                <div class="detail-row caution-row">
+                    <span class="detail-label">⚠️ முக்கிய எச்சரிக்கை (Caution & Warnings):</span>
+                    <span class="detail-value detail-text" id="valCaution">-</span>
+                </div>
+
+                <!-- Row 5: Expiry & Safety Status -->
+                <div class="detail-row safety-row" id="safetyRow">
+                    <span class="detail-label">📅 காலாவதி & பாதுகாப்பு நிலை (Expiry & Safety):</span>
+                    <span class="detail-value safety-alert" id="valSafety">-</span>
+                </div>
+            </div>
+
+            <!-- Online Fetch Status Notification -->
+            <div class="online-status-bar" id="onlineStatusBar" style="display: none;">
+                <span>🌐 இணையத்திலிருந்து பெறப்பட்ட மருத்துவ விவரங்கள் (Verified Live via Medical Web API)</span>
+            </div>
+
+            <div class="raw-text-panel" id="rawTextPanel">
+                <small>🔍 கேமரா படித்த மூல எழுத்துக்கள் (Live OCR Feed):</small>
+                <p id="rawText">-</p>
+            </div>
+        </section>
+
+        <!-- Project Info Footer for IISc / NIT Judges -->
+        <footer class="app-footer">
+            <p><strong>DRISHTI-SETU</strong> · Team Entry for <em>Seva First Innovation Challenge (SFIC)</em></p>
+            <p>Theme 3: Swasth & Samavesh Bharat · Level: Undergraduates & Above</p>
+            <p class="footer-highlight">⚡ 100% Real-Time Camera AI · Zero Hardware Sensors · Pure Software</p>
+        </footer>
+    </main>
+
+    <script src="app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister();
+                }
+            });
+        }
+    </script>
+</body>
+</html>

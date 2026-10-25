@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Temporary generation folders and logs
+edge_temp/
+*.log
+
+# Video recordings & raw media
+*.mp4
+*.webm
+*.avi
+*.mov
+
+# Binary presentation & document exports
+*.pptx
+*.pdf
+
+# Local generation scripts & presentation drafts
+generate_*.js
+render_*.js
+record_*.bat
+demo_*.html
+presentation_*.html
+concept_document.html
+DEMO_VIDEO_SCRIPT.md
+
+# OS generated files
+Thumbs.db
+.DS_Store
